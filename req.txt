@@ -1,0 +1,15 @@
+
+i want to create a website based on mern stack.
+what our work is.
+we have a team of lead generation, who have a dialy target for Job fetched and Jobs Applied.
+they should e able to view their daily target on thier particular dashboard.
+each employe has to fetch and apply on jobs for 1 or more of assigned profiles.(total profiles 4: 1. Raul Rivas, 2. Raul Sanz, 3. Raul Eduardo. 4. Demar Messado.)
+they can view their target on website and update what they acheived at the end of the day.
+
+there is an admin portal who can create a user of any kinds.
+
+there is a manager portal who updates the targets and profiles assigned to any person.
+
+the manager should be able to view each employee stats opens his data for the whole month or week or year.
+
+manager should be able to download the .dox report frmat in a specific template which i would provide you later.
