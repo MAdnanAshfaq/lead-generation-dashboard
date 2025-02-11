@@ -1,28 +1,21 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
-const userSchema = new mongoose.Schema({
-    name: {
-        type: String,
-        required: true,
-        trim: true
-    },
+const UserSchema = new mongoose.Schema({
     email: {
         type: String,
         required: true,
-        unique: true,
-        trim: true,
-        lowercase: true
+        unique: true
     },
     password: {
         type: String,
-        required: true,
-        minlength: 6
+        required: true
     },
     role: {
         type: String,
-        enum: ['admin', 'manager', 'employee'],
-        default: 'employee'
+        enum: ['ADMIN', 'MANAGER', 'EMPLOYEE'],
+        default: 'EMPLOYEE',
+        required: true
     },
     profile: {
         type: mongoose.Schema.Types.ObjectId,
@@ -40,27 +33,22 @@ const userSchema = new mongoose.Schema({
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
     }
 }, {
     timestamps: true
 });
 
-// Hash password before saving
-userSchema.pre('save', async function(next) {
-    if (!this.isModified('password')) {
-        return next();
-    }
-    try {
-        const salt = await bcrypt.genSalt(10);
-        this.password = await bcrypt.hash(this.password, salt);
-        next();
-    } catch (error) {
-        next(error);
-    }
-});
+// Method to compare password
+UserSchema.methods.comparePassword = async function(candidatePassword) {
+    return await bcrypt.compare(candidatePassword, this.password);
+};
 
 // Method to check if user has specific permission
-userSchema.methods.hasPermission = async function(permission) {
+UserSchema.methods.hasPermission = async function(permission) {
     try {
         await this.populate('profile');
         return this.profile.permissions.includes(permission);
@@ -69,4 +57,13 @@ userSchema.methods.hasPermission = async function(permission) {
     }
 };
 
-module.exports = mongoose.model('User', userSchema);
+// Log user creation
+UserSchema.pre('save', function(next) {
+    console.log('Creating/Updating user:', {
+        email: this.email,
+        role: this.role
+    });
+    next();
+});
+
+module.exports = mongoose.model('User', UserSchema);

@@ -1,0 +1,268 @@
+/* Cyberpunk-Themed Login Page */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&display=swap');
+
+:root {
+    --primary-neon: #0ef;
+    --secondary-neon: #f0f;
+    --accent-neon: #8a2be2;
+    --dark-bg: #0a0f1e;
+    --darker-bg: #060a14;
+    --light-text: #fff;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Orbitron', sans-serif;
+}
+
+body {
+    background: #0a0f1e;
+    overflow: hidden;
+}
+
+.login-page {
+    min-height: 100vh;
+    background: var(--dark-bg);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Animated Background */
+.cyber-grid {
+    position: absolute;
+    width: 200%;
+    height: 200%;
+    background: 
+        linear-gradient(transparent 0%, var(--primary-neon) 2%, transparent 5%),
+        linear-gradient(90deg, transparent 0%, var(--primary-neon) 2%, transparent 5%);
+    background-size: 50px 50px;
+    animation: gridMove 20s linear infinite;
+    opacity: 0.1;
+    transform: translateZ(0);
+}
+
+@keyframes gridMove {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Floating Particles */
+.particle {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    background: var(--primary-neon);
+    border-radius: 50%;
+    filter: blur(2px);
+    pointer-events: none;
+    transition: transform 0.2s ease;
+}
+
+/* Main Form Container */
+.login-box {
+    position: relative;
+    width: 400px;
+    background: rgba(10, 15, 30, 0.8);
+    border: 2px solid var(--primary-neon);
+    border-radius: 20px;
+    padding: 40px;
+    backdrop-filter: blur(10px);
+    box-shadow: 
+        0 0 20px rgba(0, 238, 255, 0.2),
+        inset 0 0 20px rgba(0, 238, 255, 0.1);
+    z-index: 1;
+    animation: formPulse 4s ease-in-out infinite;
+}
+
+@keyframes formPulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(0, 238, 255, 0.2); }
+    50% { box-shadow: 0 0 40px rgba(0, 238, 255, 0.4); }
+}
+
+/* Form Header */
+h2 {
+    color: var(--primary-neon);
+    text-align: center;
+    font-size: 28px;
+    margin-bottom: 30px;
+    text-shadow: 0 0 10px var(--primary-neon);
+    letter-spacing: 2px;
+}
+
+/* Input Fields */
+.input-box {
+    position: relative;
+    margin-bottom: 30px;
+}
+
+.input-box input,
+.input-box select {
+    width: 100%;
+    padding: 15px 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(0, 238, 255, 0.3);
+    border-radius: 10px;
+    color: var(--light-text);
+    font-size: 16px;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+}
+
+.input-box label {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(255, 255, 255, 0.7);
+    pointer-events: none;
+    transition: all 0.3s ease;
+}
+
+.input-box input:focus,
+.input-box input:valid {
+    border-color: var(--primary-neon);
+    box-shadow: 0 0 15px rgba(0, 238, 255, 0.3);
+}
+
+.input-box input:focus ~ label,
+.input-box input:valid ~ label {
+    top: -10px;
+    left: 15px;
+    font-size: 12px;
+    padding: 0 5px;
+    background: var(--dark-bg);
+    color: var(--primary-neon);
+}
+
+/* Submit Button */
+button {
+    width: 100%;
+    padding: 15px;
+    background: var(--primary-neon);
+    color: var(--dark-bg);
+    border: none;
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    position: relative;
+    overflow: hidden;
+}
+
+button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.2),
+        transparent
+    );
+    transition: 0.5s;
+}
+
+button:hover::before {
+    left: 100%;
+}
+
+button:hover {
+    background: #00c4d4;
+    box-shadow: 0 0 20px rgba(0, 238, 255, 0.5);
+    transform: translateY(-2px);
+}
+
+/* Links */
+.register-link {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.register-link a {
+    color: var(--primary-neon);
+    text-decoration: none;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.register-link a:hover {
+    text-shadow: 0 0 10px var(--primary-neon);
+}
+
+/* Select Styling */
+select {
+    appearance: none;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--light-text);
+    cursor: pointer;
+}
+
+select option {
+    background: var(--darker-bg);
+    color: var(--light-text);
+}
+
+/* Glitch Effect */
+.glitch-effect {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    animation: glitch 2s infinite;
+    opacity: 0;
+    mix-blend-mode: overlay;
+}
+
+@keyframes glitch {
+    0% { opacity: 0; transform: translate(0); }
+    1% { opacity: 0.1; transform: translate(-2px, 2px); }
+    2% { opacity: 0; transform: translate(0); }
+    70% { opacity: 0; transform: translate(0); }
+    71% { opacity: 0.1; transform: translate(2px, -2px); }
+    72% { opacity: 0; transform: translate(0); }
+    100% { opacity: 0; transform: translate(0); }
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+    .login-box {
+        width: 90%;
+        padding: 20px;
+    }
+
+    h2 {
+        font-size: 24px;
+    }
+
+    .input-box input,
+    .input-box select,
+    button {
+        padding: 12px;
+        font-size: 14px;
+    }
+}
+
+/* Cursor Tracking Effect */
+.cursor-effect {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    background: rgba(0, 238, 255, 0.3);
+    border-radius: 50%;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    transition: transform 0.1s;
+}

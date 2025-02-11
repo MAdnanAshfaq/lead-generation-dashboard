@@ -1,10 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { protect, authorize } = require('../middleware/auth');
+const auth = require('../middleware/auth');
+const authorize = require('../middleware/authorize');
 const { Document, Paragraph, Table, TableRow, TableCell, TextRun } = require('docx');
 const Target = require('../models/Target');
 const Achievement = require('../models/Achievement');
 const User = require('../models/User');
+const Profile = require('../models/Profile');
 
 // Helper function to create the report document
 const createReport = async (userData, targets, achievements) => {
@@ -99,53 +101,95 @@ const createReport = async (userData, targets, achievements) => {
 // @route   GET /api/reports/employee/:userId
 // @desc    Generate employee report
 // @access  Manager only
-router.get('/employee/:userId', protect, authorize('manager'), async (req, res) => {
+router.get('/employee/:userId', auth, authorize('manager'), async (req, res) => {
     try {
         const { userId } = req.params;
         const { startDate, endDate } = req.query;
 
-        // Verify the employee belongs to the manager
-        const employee = await User.findOne({
-            _id: userId,
-            manager: req.user.id
-        });
+        const query = {
+            assignedTo: userId
+        };
 
-        if (!employee) {
-            return res.status(404).json({ message: 'Employee not found or not authorized' });
+        if (startDate && endDate) {
+            query.createdAt = {
+                $gte: new Date(startDate),
+                $lte: new Date(endDate)
+            };
         }
 
-        // Fetch targets and achievements
-        const targets = await Target.find({
-            userId,
-            startDate: { $gte: new Date(startDate) },
-            endDate: { $lte: new Date(endDate) }
-        }).populate('profileWiseData.profile');
+        const profiles = await Profile.find(query);
+        const targets = await Target.find({ employeeId: userId });
 
-        const achievements = await Achievement.find({
-            userId,
-            date: { $gte: new Date(startDate), $lte: new Date(endDate) }
-        }).populate('profile');
+        const report = {
+            totalLeads: profiles.length,
+            qualifiedLeads: profiles.filter(p => p.status === 'qualified').length,
+            closedDeals: profiles.filter(p => p.status === 'closed').length,
+            targets: targets.map(t => ({
+                type: t.type,
+                value: t.value,
+                status: t.status,
+                deadline: t.deadline
+            }))
+        };
 
-        // Generate report
-        const doc = await createReport(employee, targets, achievements);
-
-        // Set headers for file download
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-        res.setHeader('Content-Disposition', `attachment; filename=${employee.username}_report.docx`);
-
-        // Generate document buffer and send
-        const buffer = await doc.save();
-        res.send(buffer);
-
+        res.json(report);
     } catch (error) {
-        res.status(500).json({ message: 'Error generating report', error: error.message });
+        console.error('Error generating employee report:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// @route   GET /api/reports/team
+// @desc    Get team performance report
+// @access  Manager only
+router.get('/team', auth, authorize('manager'), async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+
+        const query = {};
+        if (startDate && endDate) {
+            query.createdAt = {
+                $gte: new Date(startDate),
+                $lte: new Date(endDate)
+            };
+        }
+
+        const profiles = await Profile.find(query)
+            .populate('assignedTo', 'email');
+
+        const teamReport = profiles.reduce((acc, profile) => {
+            const employeeEmail = profile.assignedTo.email;
+            
+            if (!acc[employeeEmail]) {
+                acc[employeeEmail] = {
+                    totalLeads: 0,
+                    qualifiedLeads: 0,
+                    closedDeals: 0
+                };
+            }
+
+            acc[employeeEmail].totalLeads++;
+            if (profile.status === 'qualified') {
+                acc[employeeEmail].qualifiedLeads++;
+            }
+            if (profile.status === 'closed') {
+                acc[employeeEmail].closedDeals++;
+            }
+
+            return acc;
+        }, {});
+
+        res.json(teamReport);
+    } catch (error) {
+        console.error('Error generating team report:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
 // @route   GET /api/reports/manager/summary
 // @desc    Get report summary for manager
 // @access  Manager only
-router.get('/manager/summary', protect, authorize('manager'), async (req, res) => {
+router.get('/manager/summary', auth, authorize('manager'), async (req, res) => {
     try {
         const summary = {
             totalTargets: await Target.countDocuments(),

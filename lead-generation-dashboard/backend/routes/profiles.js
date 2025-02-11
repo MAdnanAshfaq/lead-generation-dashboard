@@ -1,13 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { protect, authorize } = require('../middleware/auth');
+const auth = require('../middleware/auth');
+const authorize = require('../middleware/authorize');
 const Profile = require('../models/Profile');
 const User = require('../models/User');
 
 // @route   GET /api/profiles
 // @desc    Get all profiles with their assignments
 // @access  Manager/Employee
-router.get('/', protect, async (req, res) => {
+router.get('/', auth, async (req, res) => {
     try {
         const profiles = await Profile.find()
             .populate('assignments.employee', 'name email role');
@@ -17,18 +18,15 @@ router.get('/', protect, async (req, res) => {
             data: profiles
         });
     } catch (error) {
-        res.status(500).json({ 
-            success: false,
-            message: 'Error fetching profiles',
-            error: error.message 
-        });
+        console.error('Error fetching profiles:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
 // @route   GET /api/profiles/:profileId
 // @desc    Get single profile with assignments and targets
 // @access  Manager/Employee
-router.get('/:profileId', protect, async (req, res) => {
+router.get('/:profileId', auth, async (req, res) => {
     try {
         const profile = await Profile.findById(req.params.profileId)
             .populate('assignments.employee', 'name email role');
@@ -39,14 +37,15 @@ router.get('/:profileId', protect, async (req, res) => {
 
         res.json(profile);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching profile', error: error.message });
+        console.error('Error fetching profile:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
 // @route   POST /api/profiles/assign
 // @desc    Assign profile to employee
 // @access  Manager only
-router.post('/assign', protect, authorize('manager'), async (req, res) => {
+router.post('/assign', auth, authorize('manager'), async (req, res) => {
     try {
         const { profileId, userId } = req.body;
 
@@ -84,14 +83,15 @@ router.post('/assign', protect, authorize('manager'), async (req, res) => {
 
         res.json(updatedProfile);
     } catch (error) {
-        res.status(500).json({ message: 'Error assigning profile', error: error.message });
+        console.error('Error assigning profile:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
 // @route   POST /api/profiles/:profileId/targets
 // @desc    Add target to employee's profile assignment
 // @access  Manager only
-router.post('/:profileId/targets', protect, authorize('manager'), async (req, res) => {
+router.post('/:profileId/targets', auth, authorize('manager'), async (req, res) => {
     try {
         const { month, year, targetAmount, userId } = req.body;
         
@@ -136,14 +136,15 @@ router.post('/:profileId/targets', protect, authorize('manager'), async (req, re
 
         res.json(updatedProfile);
     } catch (error) {
-        res.status(500).json({ message: 'Error adding target', error: error.message });
+        console.error('Error adding target:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
 // @route   PUT /api/profiles/:profileId/targets/:targetId
 // @desc    Update target progress
 // @access  Manager/Employee
-router.put('/:profileId/targets/:targetId', protect, async (req, res) => {
+router.put('/:profileId/targets/:targetId', auth, async (req, res) => {
     try {
         const profile = await Profile.findById(req.params.profileId);
         if (!profile) {
@@ -184,14 +185,15 @@ router.put('/:profileId/targets/:targetId', protect, async (req, res) => {
 
         res.json(updatedProfile);
     } catch (error) {
-        res.status(500).json({ message: 'Error updating target', error: error.message });
+        console.error('Error updating target:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
 // @route   GET /api/profiles/employee/:userId
 // @desc    Get profiles assigned to an employee
 // @access  Manager/Employee
-router.get('/employee/:userId', protect, async (req, res) => {
+router.get('/employee/:userId', auth, async (req, res) => {
     try {
         const profiles = await Profile.find({
             'assignments.employee': req.params.userId
@@ -199,7 +201,8 @@ router.get('/employee/:userId', protect, async (req, res) => {
 
         res.json(profiles);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching profiles', error: error.message });
+        console.error('Error fetching profiles:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
@@ -247,6 +250,50 @@ router.post('/seed', async (req, res) => {
             message: 'Error seeding profiles',
             error: error.message 
         });
+    }
+});
+
+// Create profile
+router.post('/', auth, authorize('manager'), async (req, res) => {
+    try {
+        const profile = new Profile(req.body);
+        await profile.save();
+        res.status(201).json(profile);
+    } catch (error) {
+        console.error('Error creating profile:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Update profile
+router.put('/:id', auth, authorize('manager'), async (req, res) => {
+    try {
+        const profile = await Profile.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true }
+        );
+        if (!profile) {
+            return res.status(404).json({ message: 'Profile not found' });
+        }
+        res.json(profile);
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Delete profile
+router.delete('/:id', auth, authorize('manager'), async (req, res) => {
+    try {
+        const profile = await Profile.findByIdAndDelete(req.params.id);
+        if (!profile) {
+            return res.status(404).json({ message: 'Profile not found' });
+        }
+        res.json({ message: 'Profile deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting profile:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 

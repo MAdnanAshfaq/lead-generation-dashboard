@@ -1,14 +1,14 @@
 const mongoose = require('mongoose');
 
-const targetSchema = new mongoose.Schema({
-    userId: {
+const TargetSchema = new mongoose.Schema({
+    employeeId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
     },
     type: {
         type: String,
-        enum: ['daily', 'weekly', 'monthly', 'yearly'],
+        enum: ['daily', 'weekly', 'monthly'],
         required: true
     },
     startDate: {
@@ -19,105 +19,45 @@ const targetSchema = new mongoose.Schema({
         type: Date,
         required: true
     },
+    status: {
+        type: String,
+        enum: ['pending', 'in_progress', 'completed', 'failed'],
+        default: 'pending'
+    },
     targets: {
         jobsFetched: {
             type: Number,
-            required: true,
-            min: 0
+            required: true
         },
         jobsApplied: {
             type: Number,
-            required: true,
-            min: 0
+            required: true
         }
     },
     achievements: {
         jobsFetched: {
             type: Number,
-            default: 0,
-            min: 0
+            default: 0
         },
         jobsApplied: {
             type: Number,
-            default: 0,
-            min: 0
+            default: 0
         }
     },
     profileWiseData: [{
-        profile: {
+        profileId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Profile',
-            required: true
+            ref: 'Profile'
         },
-        targets: {
-            jobsFetched: {
-                type: Number,
-                required: true,
-                min: 0
-            },
-            jobsApplied: {
-                type: Number,
-                required: true,
-                min: 0
-            }
-        },
-        achievements: {
-            jobsFetched: {
-                type: Number,
-                default: 0,
-                min: 0
-            },
-            jobsApplied: {
-                type: Number,
-                default: 0,
-                min: 0
-            }
-        }
+        target: Number
     }],
-    status: {
-        type: String,
-        enum: ['pending', 'in-progress', 'completed'],
-        default: 'pending'
-    },
-    completionRate: {
-        type: Number,
-        min: 0,
-        max: 100,
-        default: 0
-    },
-    notes: {
-        type: String
-    },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
-    },
-    updatedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
     }
+}, {
+    timestamps: true
 });
 
-// Pre-save middleware to calculate completion rate
-targetSchema.pre('save', function(next) {
-    const totalTargets = this.targets.jobsFetched + this.targets.jobsApplied;
-    const totalAchievements = this.achievements.jobsFetched + this.achievements.jobsApplied;
-    
-    this.completionRate = totalTargets > 0 
-        ? (totalAchievements / totalTargets) * 100 
-        : 0;
-    
-    next();
-});
-
-module.exports = mongoose.model('Target', targetSchema);
+module.exports = mongoose.model('Target', TargetSchema);

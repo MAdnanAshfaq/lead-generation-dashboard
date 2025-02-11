@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { protect, authorize } = require('../middleware/auth');
+const auth = require('../middleware/auth');
+const authorize = require('../middleware/authorize');
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 
@@ -44,6 +45,9 @@ router.post('/', async (req, res) => {
 
         console.log('Attempting to save user:', { name: user.name, email: user.email, role: user.role });
         
+        const salt = await bcrypt.genSalt(12);
+        user.password = await bcrypt.hash(password, salt);
+        
         await user.save();
         console.log('User saved successfully');
 
@@ -69,40 +73,20 @@ router.post('/', async (req, res) => {
 // @route   GET /api/users
 // @desc    Get all users
 // @access  Admin only
-router.get('/', protect, authorize('admin'), async (req, res) => {
+router.get('/', auth, async (req, res) => {
     try {
-        const query = {};
-        
-        // Managers can only see their employees
-        if (req.user.role === 'manager') {
-            query.manager = req.user.id;
-        }
-
-        console.log('Fetching users with query:', query);
-        const users = await User.find(query)
-            .select('-password')
-            .populate('manager', 'username firstName lastName email')
-            .populate('assignedProfiles.profile');
-        console.log('Fetched users:', users);
-
-        res.json({
-            success: true,
-            data: users
-        });
+        const users = await User.find().select('-password');
+        res.json(users);
     } catch (error) {
         console.error('Error fetching users:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error fetching users',
-            error: error.message
-        });
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
 // @route   GET /api/users/employees
 // @desc    Get all employees
 // @access  Manager only
-router.get('/employees', protect, authorize('manager'), async (req, res) => {
+router.get('/employees', auth, authorize('manager'), async (req, res) => {
     try {
         const employees = await User.find({ role: 'employee' }).select('-password');
         res.json(employees);
@@ -114,7 +98,7 @@ router.get('/employees', protect, authorize('manager'), async (req, res) => {
 // @route   GET /api/users/employees
 // @desc    Get all employees
 // @access  Manager/Admin
-router.get('/employees', protect, authorize('manager', 'admin'), async (req, res) => {
+router.get('/employees', auth, authorize('manager', 'admin'), async (req, res) => {
     try {
         const employees = await User.find({ 
             role: 'employee',
@@ -138,7 +122,7 @@ router.get('/employees', protect, authorize('manager', 'admin'), async (req, res
 // @route   GET /api/users/employees
 // @desc    Get all employees
 // @access  Manager/Admin
-router.get('/employees', protect, authorize('manager', 'admin'), async (req, res) => {
+router.get('/employees', auth, authorize('manager', 'admin'), async (req, res) => {
     try {
         const employees = await User.find({ 
             role: 'employee',
@@ -159,80 +143,64 @@ router.get('/employees', protect, authorize('manager', 'admin'), async (req, res
     }
 });
 
+// @route   GET /api/users/:id
+// @desc    Get user by ID
+// @access  Private
+router.get('/:id', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id).select('-password');
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.json(user);
+    } catch (error) {
+        console.error('Error fetching user:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 // @route   PUT /api/users/:id
 // @desc    Update user
-// @access  Admin only
-router.put('/:id', protect, authorize('admin'), async (req, res) => {
+// @access  Private
+router.put('/:id', auth, async (req, res) => {
     try {
-        const { password, ...updateData } = req.body;
-        
-        // If password is provided, hash it
-        if (password) {
-            const salt = await bcrypt.genSalt(10);
-            updateData.password = await bcrypt.hash(password, salt);
-        }
-
+        const { email, role } = req.body;
         const user = await User.findByIdAndUpdate(
             req.params.id,
-            { ...updateData, updatedAt: Date.now() },
+            { email, role },
             { new: true }
         ).select('-password');
-
+        
         if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
+            return res.status(404).json({ message: 'User not found' });
         }
-
-        res.json({
-            success: true,
-            data: user
-        });
+        res.json(user);
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Error updating user',
-            error: error.message
-        });
+        console.error('Error updating user:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
 // @route   DELETE /api/users/:id
 // @desc    Delete user (soft delete)
-// @access  Admin only
-router.delete('/:id', protect, authorize('admin'), async (req, res) => {
+// @access  Private
+router.delete('/:id', auth, async (req, res) => {
     try {
-        const user = await User.findByIdAndUpdate(
-            req.params.id,
-            { status: 'inactive', updatedAt: Date.now() },
-            { new: true }
-        ).select('-password');
-
+        const user = await User.findByIdAndDelete(req.params.id);
         if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
+            return res.status(404).json({ message: 'User not found' });
         }
-
-        res.json({
-            success: true,
-            message: 'User deactivated successfully'
-        });
+        res.json({ message: 'User deleted successfully' });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Error deactivating user',
-            error: error.message
-        });
+        console.error('Error deleting user:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
 // @route   GET /api/users/:userId/stats
 // @desc    Get user statistics
 // @access  Private
-router.get('/:userId/stats', protect, async (req, res) => {
+router.get('/:userId/stats', auth, async (req, res) => {
     try {
         const { userId } = req.params;
         const { startDate, endDate } = req.query;
@@ -357,6 +325,125 @@ router.post('/seed', async (req, res) => {
             success: false,
             message: 'Error seeding test employees',
             error: error.message 
+        });
+    }
+});
+
+// @route   POST /api/users/create
+// @desc    Create a new user (admin only)
+// @access  Admin only
+router.post('/create', auth, authorize('ADMIN'), async (req, res) => {
+    try {
+        const { email, password, role, name } = req.body;
+
+        // Check if user exists
+        let user = await User.findOne({ email: email.toLowerCase() });
+        if (user) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'User already exists' 
+            });
+        }
+
+        // Create new user
+        user = new User({
+            email: email.toLowerCase(),
+            password,
+            role: role.toUpperCase(),
+            name,
+            status: 'active'
+        });
+
+        // Hash password
+        const salt = await bcrypt.genSalt(12);
+        user.password = await bcrypt.hash(password, salt);
+
+        await user.save();
+
+        // Remove password from response
+        const userResponse = user.toObject();
+        delete userResponse.password;
+
+        res.status(201).json({
+            success: true,
+            message: 'User created successfully',
+            data: userResponse
+        });
+    } catch (error) {
+        console.error('Error creating user:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error creating user',
+            error: error.message
+        });
+    }
+});
+
+// @route   PUT /api/users/:id/status
+// @desc    Update user status (active/inactive)
+// @access  Admin only
+router.put('/:id/status', auth, authorize('ADMIN'), async (req, res) => {
+    try {
+        const { status } = req.body;
+        const user = await User.findByIdAndUpdate(
+            req.params.id,
+            { status },
+            { new: true }
+        ).select('-password');
+
+        if (!user) {
+            return res.status(404).json({ 
+                success: false,
+                message: 'User not found' 
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'User status updated successfully',
+            data: user
+        });
+    } catch (error) {
+        console.error('Error updating user status:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error updating user status',
+            error: error.message
+        });
+    }
+});
+
+// @route   GET /api/users/all
+// @desc    Get all users with filters
+// @access  Admin only
+router.get('/all', auth, authorize('ADMIN'), async (req, res) => {
+    try {
+        const { role, status, search } = req.query;
+        const query = {};
+
+        if (role) query.role = role.toUpperCase();
+        if (status) query.status = status;
+        if (search) {
+            query.$or = [
+                { email: new RegExp(search, 'i') },
+                { name: new RegExp(search, 'i') }
+            ];
+        }
+
+        const users = await User.find(query)
+            .select('-password')
+            .sort({ createdAt: -1 });
+
+        res.json({
+            success: true,
+            data: users
+        });
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching users',
+            error: error.message
         });
     }
 });

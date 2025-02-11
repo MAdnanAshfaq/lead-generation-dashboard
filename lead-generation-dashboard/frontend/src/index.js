@@ -1,10 +1,6 @@
 import React from 'react';
-import { createRoot } from 'react-dom/client';
-import { Provider } from 'react-redux';
-import { ThemeProvider } from '@mui/material/styles';
-import { CssBaseline } from '@mui/material';
-import theme from './theme';
-import { store } from './store/store';
+import ReactDOM from 'react-dom/client';
+import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
@@ -12,17 +8,12 @@ import reportWebVitals from './reportWebVitals';
 const container = document.getElementById('root');
 
 // Create a root
-const root = createRoot(container);
+const root = ReactDOM.createRoot(container);
 
 // Render app
 root.render(
   <React.StrictMode>
-    <Provider store={store}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <App />
-      </ThemeProvider>
-    </Provider>
+    <App />
   </React.StrictMode>
 );
 

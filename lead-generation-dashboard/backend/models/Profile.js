@@ -3,52 +3,29 @@ const mongoose = require('mongoose');
 const profileSchema = new mongoose.Schema({
     name: {
         type: String,
-        required: true,
-        enum: ['Raul Rivas', 'Raul Sanz', 'Raul Eduardo', 'Demar Messado']
+        required: true
     },
-    assignments: [{
-        employee: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
-            required: true
-        },
-        targets: [{
-            month: {
-                type: String,
-                required: true
-            },
-            year: {
-                type: Number,
-                required: true
-            },
-            targetAmount: {
-                type: Number,
-                required: true
-            },
-            achievedAmount: {
-                type: Number,
-                default: 0
-            },
-            status: {
-                type: String,
-                enum: ['pending', 'in_progress', 'completed'],
-                default: 'pending'
-            }
-        }],
-        assignedAt: {
-            type: Date,
-            default: Date.now
-        },
-        status: {
-            type: String,
-            enum: ['active', 'inactive'],
-            default: 'active'
-        }
-    }],
+    email: {
+        type: String,
+        required: true
+    },
+    phone: {
+        type: String,
+        required: true
+    },
+    company: {
+        type: String,
+        required: true
+    },
     status: {
         type: String,
-        enum: ['active', 'inactive'],
-        default: 'active'
+        enum: ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'closed'],
+        default: 'new'
+    },
+    assignedTo: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
     },
     createdAt: {
         type: Date,
@@ -60,12 +37,10 @@ const profileSchema = new mongoose.Schema({
     }
 });
 
-// Pre-save middleware to update the updatedAt field
+// Update the updatedAt timestamp before saving
 profileSchema.pre('save', function(next) {
-    this.updatedAt = new Date();
+    this.updatedAt = Date.now();
     next();
 });
 
-const Profile = mongoose.model('Profile', profileSchema);
-
-module.exports = Profile;
+module.exports = mongoose.model('Profile', profileSchema);

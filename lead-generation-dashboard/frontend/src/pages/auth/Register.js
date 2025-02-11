@@ -1,23 +1,62 @@
-import React from 'react';
-import {
-    Box,
-    Card,
-    TextField,
-    Button,
-    Typography,
-    Link,
-    FormControl,
-    InputLabel,
-    Select,
-    MenuItem,
-} from '@mui/material';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { motion } from 'framer-motion';
-import { varFadeIn } from '../../components/animate/variants/fade';
+import './Register.css';
 
 const Register = () => {
+    const [particles, setParticles] = useState([]);
+
+    // Create particles
+    useEffect(() => {
+        const particleCount = 50;
+        const newParticles = Array.from({ length: particleCount }, (_, i) => ({
+            id: i,
+            x: Math.random() * window.innerWidth,
+            y: Math.random() * window.innerHeight,
+            size: Math.random() * 2 + 1,
+        }));
+        setParticles(newParticles);
+    }, []);
+
+    // Handle mouse movement
+    const handleMouseMove = useCallback((e) => {
+        const { clientX, clientY } = e;
+        
+        // Update particles
+        setParticles(prev => prev.map(particle => {
+            const dx = clientX - particle.x;
+            const dy = clientY - particle.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < 100) {
+                const angle = Math.atan2(dy, dx);
+                return {
+                    ...particle,
+                    x: particle.x - Math.cos(angle) * 2,
+                    y: particle.y - Math.sin(angle) * 2,
+                };
+            }
+            return particle;
+        }));
+
+        // Update floating objects size
+        document.querySelectorAll('.floating-object').forEach(obj => {
+            const rect = obj.getBoundingClientRect();
+            const dx = clientX - (rect.left + rect.width / 2);
+            const dy = clientY - (rect.top + rect.height / 2);
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < 200) {
+                const scale = 1 + (200 - distance) / 200;
+                obj.style.transform = `scale(${scale})`;
+            } else {
+                obj.style.transform = 'scale(1)';
+            }
+        });
+    }, []);
+
+    // Form validation
     const formik = useFormik({
         initialValues: {
             name: '',
@@ -27,141 +66,162 @@ const Register = () => {
             role: 'EMPLOYEE',
         },
         validationSchema: Yup.object({
-            name: Yup.string()
-                .required('Name is required')
-                .min(2, 'Name must be at least 2 characters'),
-            email: Yup.string()
-                .email('Invalid email address')
-                .required('Email is required'),
-            password: Yup.string()
-                .required('Password is required')
-                .min(8, 'Password must be at least 8 characters')
-                .matches(
-                    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-                    'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
-                ),
+            name: Yup.string().required('Required'),
+            email: Yup.string().email('Invalid email').required('Required'),
+            password: Yup.string().required('Required'),
             confirmPassword: Yup.string()
-                .required('Please confirm your password')
-                .oneOf([Yup.ref('password'), null], 'Passwords must match'),
-            role: Yup.string().required('Role is required'),
+                .oneOf([Yup.ref('password'), null], 'Passwords must match')
+                .required('Required'),
+            role: Yup.string().required('Required'),
         }),
         onSubmit: (values) => {
-            // Handle registration logic
-            console.log('Registration values:', values);
+            console.log(values);
         },
     });
 
     return (
-        <Box
-            component={motion.div}
-            variants={varFadeIn}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            sx={{
-                minHeight: '100vh',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                p: 3,
-                backgroundColor: (theme) => theme.palette.background.default,
-            }}
-        >
-            <Card
-                sx={{
-                    p: 4,
-                    width: '100%',
-                    maxWidth: 480,
-                }}
-            >
-                <Typography variant="h4" sx={{ mb: 3, textAlign: 'center' }}>
-                    Register
-                </Typography>
+        <div className="login-page" onMouseMove={handleMouseMove}>
+            {/* Animated background grid */}
+            <div className="cyber-grid"></div>
 
+            {/* Floating particles */}
+            {particles.map(particle => (
+                <div
+                    key={particle.id}
+                    className="particle"
+                    style={{
+                        left: `${particle.x}px`,
+                        top: `${particle.y}px`,
+                        width: `${particle.size}px`,
+                        height: `${particle.size}px`,
+                    }}
+                />
+            ))}
+
+            {/* Main form container */}
+            <div className="login-box">
+                <div className="glitch-effect"></div>
+                <h2>Register</h2>
                 <form onSubmit={formik.handleSubmit}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <TextField
-                            fullWidth
-                            id="name"
+                    <div className="input-box">
+                        <input
+                            type="text"
                             name="name"
-                            label="Name"
                             value={formik.values.name}
                             onChange={formik.handleChange}
-                            error={formik.touched.name && Boolean(formik.errors.name)}
-                            helperText={formik.touched.name && formik.errors.name}
+                            onBlur={formik.handleBlur}
+                            required
                         />
+                        <label>Name</label>
+                        {formik.touched.name && formik.errors.name && (
+                            <div className="error-message">{formik.errors.name}</div>
+                        )}
+                    </div>
 
-                        <TextField
-                            fullWidth
-                            id="email"
+                    <div className="input-box">
+                        <input
+                            type="email"
                             name="email"
-                            label="Email"
                             value={formik.values.email}
                             onChange={formik.handleChange}
-                            error={formik.touched.email && Boolean(formik.errors.email)}
-                            helperText={formik.touched.email && formik.errors.email}
+                            onBlur={formik.handleBlur}
+                            required
                         />
+                        <label>Email</label>
+                        {formik.touched.email && formik.errors.email && (
+                            <div className="error-message">{formik.errors.email}</div>
+                        )}
+                    </div>
 
-                        <TextField
-                            fullWidth
-                            id="password"
-                            name="password"
-                            label="Password"
+                    <div className="input-box">
+                        <input
                             type="password"
+                            name="password"
                             value={formik.values.password}
                             onChange={formik.handleChange}
-                            error={formik.touched.password && Boolean(formik.errors.password)}
-                            helperText={formik.touched.password && formik.errors.password}
+                            onBlur={formik.handleBlur}
+                            required
                         />
+                        <label>Password</label>
+                        {formik.touched.password && formik.errors.password && (
+                            <div className="error-message">{formik.errors.password}</div>
+                        )}
+                    </div>
 
-                        <TextField
-                            fullWidth
-                            id="confirmPassword"
-                            name="confirmPassword"
-                            label="Confirm Password"
+                    <div className="input-box">
+                        <input
                             type="password"
+                            name="confirmPassword"
                             value={formik.values.confirmPassword}
                             onChange={formik.handleChange}
-                            error={formik.touched.confirmPassword && Boolean(formik.errors.confirmPassword)}
-                            helperText={formik.touched.confirmPassword && formik.errors.confirmPassword}
+                            onBlur={formik.handleBlur}
+                            required
                         />
+                        <label>Confirm Password</label>
+                        {formik.touched.confirmPassword && formik.errors.confirmPassword && (
+                            <div className="error-message">{formik.errors.confirmPassword}</div>
+                        )}
+                    </div>
 
-                        <FormControl fullWidth>
-                            <InputLabel id="role-label">Role</InputLabel>
-                            <Select
-                                labelId="role-label"
-                                id="role"
-                                name="role"
-                                value={formik.values.role}
-                                label="Role"
-                                onChange={formik.handleChange}
-                                error={formik.touched.role && Boolean(formik.errors.role)}
-                            >
-                                <MenuItem value="EMPLOYEE">Employee</MenuItem>
-                                <MenuItem value="MANAGER">Manager</MenuItem>
-                            </Select>
-                        </FormControl>
-
-                        <Button
-                            fullWidth
-                            size="large"
-                            type="submit"
-                            variant="contained"
-                            sx={{ mt: 2 }}
+                    <div className="input-box">
+                        <select
+                            name="role"
+                            value={formik.values.role}
+                            onChange={formik.handleChange}
+                            onBlur={formik.handleBlur}
+                            required
                         >
-                            Register
-                        </Button>
+                            <option value="EMPLOYEE">Employee</option>
+                            <option value="MANAGER">Manager</option>
+                        </select>
+                    </div>
 
-                        <Typography variant="body2" align="center" sx={{ mt: 2 }}>
-                            Already have an account?{' '}
-                            <Link component={RouterLink} to="/login" variant="subtitle2">
-                                Login
-                            </Link>
-                        </Typography>
-                    </Box>
+                    <button type="submit">Register</button>
+
+                    <div className="register-link">
+                        <RouterLink to="/login">Already have an account?</RouterLink>
+                    </div>
                 </form>
-            </Card>
-        </Box>
+            </div>
+
+            {/* Cyberpunk background elements */}
+            <div className="cyber-background">
+                <div className="hex-grid"></div>
+                
+                {/* Loading Bars */}
+                <div className="loading-bars">
+                    {[...Array(6)].map((_, i) => (
+                        <div 
+                            key={i}
+                            className="loading-bar"
+                            style={{
+                                top: `${i * 20}%`,
+                                animationDelay: `${i * 0.5}s`
+                            }}
+                        />
+                    ))}
+                </div>
+
+                {/* Floating Objects */}
+                {[...Array(15)].map((_, i) => (
+                    <div
+                        key={i}
+                        className="floating-object"
+                        style={{
+                            left: `${Math.random() * 100}%`,
+                            top: `${Math.random() * 100}%`,
+                            width: `${Math.random() * 20 + 5}px`,
+                            height: `${Math.random() * 20 + 5}px`,
+                            animationDelay: `${Math.random() * 5}s`
+                        }}
+                    />
+                ))}
+
+                {/* Side Decorations */}
+                <div className="side-decor left"></div>
+                <div className="side-decor right"></div>
+            </div>
+        </div>
     );
 };
 

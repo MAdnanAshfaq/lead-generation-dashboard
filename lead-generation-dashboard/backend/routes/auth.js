@@ -3,122 +3,73 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
-const { protect, authorize } = require('../middleware/auth');
+const auth = require('../middleware/auth');
+const authorize = require('../middleware/authorize');
 
-// @route   POST /api/auth/register
-// @desc    Register a user
+const JWT_SECRET = process.env.JWT_SECRET || 'lead_generation_super_secret_key_2024';
+
+// Mock user data (replace with database in production)
+const users = [
+    { id: 1, email: 'admin@leadgen.com', password: 'Admin@2024', role: 'ADMIN' },
+    { id: 2, email: 'manager@genesis.com', password: 'manager123', role: 'MANAGER' },
+    { id: 3, email: 'employee@genesis.com', password: 'employee123', role: 'EMPLOYEE' }
+];
+
+// @route   POST api/auth/login
+// @desc    Authenticate user & get token
+// @access  Public
+router.post('/login', (req, res) => {
+    const { email, password } = req.body;
+    
+    const user = users.find(u => u.email === email && u.password === password);
+    
+    if (!user) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    const token = jwt.sign(
+        { id: user.id, email: user.email, role: user.role },
+        process.env.JWT_SECRET || 'your-secret-key',
+        { expiresIn: '1h' }
+    );
+
+    res.json({
+        token,
+        user: {
+            id: user.id,
+            email: user.email,
+            role: user.role
+        }
+    });
+});
+
+// @route   POST api/auth/register
+// @desc    Register a new user
 // @access  Admin only
-router.post('/register', protect, authorize('admin'), async (req, res) => {
+router.post('/register', auth, async (req, res) => {
     try {
-        const { username, email, password, firstName, lastName, role, manager } = req.body;
+        const { email, password, role } = req.body;
 
-        const userExists = await User.findOne({ $or: [{ email }, { username }] });
-        if (userExists) {
+        let user = await User.findOne({ email });
+        if (user) {
             return res.status(400).json({ message: 'User already exists' });
         }
 
-        const user = await User.create({
-            username,
+        user = new User({
             email,
             password,
-            firstName,
-            lastName,
-            role,
-            manager: role === 'employee' ? manager : undefined
+            role: role || 'employee'
         });
 
-        res.status(201).json({
-            message: 'User created successfully',
-            user: {
-                id: user._id,
-                username: user.username,
-                email: user.email,
-                role: user.role
-            }
-        });
-    } catch (error) {
-        res.status(500).json({ message: 'Error creating user', error: error.message });
-    }
-});
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(password, salt);
 
-// @route   POST /api/auth/login
-// @desc    Login user and get token
-// @access  Public
-router.post('/login', async (req, res) => {
-    console.log('=== Login Request ===');
-    console.log('Request body:', req.body);
-    
-    try {
-        const { email, password } = req.body;
+        await user.save();
 
-        // Validation
-        if (!email || !password) {
-            console.log('Missing email or password');
-            return res.status(400).json({
-                success: false,
-                message: 'Please provide email and password'
-            });
-        }
-
-        // Find user
-        const user = await User.findOne({ email: email.toLowerCase() });
-        console.log('User found:', user ? 'Yes' : 'No');
-        console.log('User details:', user ? {
-            id: user._id,
-            email: user.email,
-            role: user.role
-        } : 'Not found');
-        
-        if (!user) {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid credentials'
-            });
-        }
-
-        // Check password
-        const isMatch = await bcrypt.compare(password, user.password);
-        console.log('Password match:', isMatch ? 'Yes' : 'No');
-        console.log('Stored password hash:', user.password);
-        console.log('Provided password:', password);
-        
-        if (!isMatch) {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid credentials'
-            });
-        }
-
-        // Create token
-        const token = jwt.sign(
-            { 
-                id: user._id,
-                role: user.role 
-            },
-            process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production',
-            { expiresIn: '1d' }
-        );
-
-        console.log('Login successful for user:', user.email);
-
-        // Send response
-        res.json({
-            success: true,
-            token,
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role
-            }
-        });
-    } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error logging in',
-            error: error.message
-        });
+        res.status(201).json({ message: 'User registered successfully' });
+    } catch (err) {
+        console.error('Registration error:', err);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
@@ -177,6 +128,18 @@ router.post('/refresh', async (req, res) => {
         res.json({ token: newToken });
     } catch (error) {
         res.status(401).json({ message: 'Invalid token' });
+    }
+});
+
+// @route   GET /api/auth/verify
+// @desc    Verify token
+// @access  Private
+router.get('/verify', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('-password');
+        res.json({ user });
+    } catch (err) {
+        res.status(500).json({ message: 'Server error' });
     }
 });
 

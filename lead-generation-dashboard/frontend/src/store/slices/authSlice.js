@@ -1,110 +1,67 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { authAPI } from '../../services/api';
+import { createSlice } from '@reduxjs/toolkit';
+import axiosInstance from '../../utils/axiosConfig';
 
-// Async thunks
-export const login = createAsyncThunk(
-    'auth/login',
-    async (credentials, { rejectWithValue }) => {
-        try {
-            const response = await authAPI.login(credentials);
-            
-            if (!response.data.success) {
-                throw new Error(response.data.message || 'Login failed');
-            }
-            
-            const { token, user } = response.data;
-            localStorage.setItem('token', token);
-            return { ...user, token };
-        } catch (error) {
-            console.error('Login error:', error);
-            if (error.response) {
-                return rejectWithValue(error.response.data.message || 'Login failed');
-            }
-            return rejectWithValue(error.message || 'Login failed');
-        }
-    }
-);
-
-export const getCurrentUser = createAsyncThunk(
-    'auth/getCurrentUser',
-    async (_, { rejectWithValue }) => {
-        try {
-            const response = await authAPI.getCurrentUser();
-            return response.data.user;
-        } catch (error) {
-            console.error('Get current user error:', error);
-            if (error.response) {
-                return rejectWithValue(error.response.data.message);
-            }
-            return rejectWithValue('Failed to get current user');
-        }
-    }
-);
-
-// Initial state
 const initialState = {
-    user: null,
-    isAuthenticated: false,
-    loading: false,
-    error: null
+    token: localStorage.getItem('token'),
+    user: JSON.parse(localStorage.getItem('user') || 'null'),
+    isAuthenticated: !!localStorage.getItem('token')
 };
 
-// Slice
 const authSlice = createSlice({
     name: 'auth',
     initialState,
     reducers: {
+        login: (state, action) => {
+            state.token = action.payload.token;
+            state.user = action.payload.user;
+            state.isAuthenticated = true;
+            
+            // Store in localStorage
+            localStorage.setItem('token', action.payload.token);
+            localStorage.setItem('user', JSON.stringify(action.payload.user));
+        },
         logout: (state) => {
-            localStorage.removeItem('token');
+            state.token = null;
             state.user = null;
             state.isAuthenticated = false;
-            state.error = null;
+            
+            // Clear localStorage
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+        },
+        setError: (state, action) => {
+            state.error = action.payload;
+            state.loading = false;
         },
         clearError: (state) => {
             state.error = null;
         }
-    },
-    extraReducers: (builder) => {
-        builder
-            .addCase(login.pending, (state) => {
-                state.loading = true;
-                state.error = null;
-            })
-            .addCase(login.fulfilled, (state, action) => {
-                state.loading = false;
-                state.user = action.payload;
-                state.isAuthenticated = true;
-                state.error = null;
-            })
-            .addCase(login.rejected, (state, action) => {
-                state.loading = false;
-                state.error = action.payload;
-            })
-            .addCase(getCurrentUser.pending, (state) => {
-                state.loading = true;
-                state.error = null;
-            })
-            .addCase(getCurrentUser.fulfilled, (state, action) => {
-                state.loading = false;
-                state.user = action.payload;
-                state.isAuthenticated = true;
-                state.error = null;
-            })
-            .addCase(getCurrentUser.rejected, (state, action) => {
-                state.loading = false;
-                state.error = action.payload;
-            });
     }
 });
 
-// Actions
-export const { logout, clearError } = authSlice.actions;
+export const { login, logout, setError, clearError } = authSlice.actions;
 
-// Selectors
+// Thunk for verifying token
+export const verifyToken = () => async (dispatch) => {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            dispatch(logout());
+            return false;
+        }
+
+        const response = await axiosInstance.get('/auth/verify');
+        return true;
+    } catch (error) {
+        console.error('Token verification failed:', error);
+        dispatch(logout());
+        return false;
+    }
+};
+
 export const selectAuth = (state) => state.auth;
 export const selectUser = (state) => state.auth.user;
 export const selectIsAuthenticated = (state) => state.auth.isAuthenticated;
-export const selectAuthLoading = (state) => state.auth.loading;
 export const selectAuthError = (state) => state.auth.error;
 
 export default authSlice.reducer;

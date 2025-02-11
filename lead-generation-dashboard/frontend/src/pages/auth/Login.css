@@ -1,0 +1,109 @@
+/* Face */
+.face {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    background-color: #ffcc00;
+    border-radius: 50%;
+    margin-bottom: 20px;
+}
+
+/* Eyes */
+.eyes {
+    display: flex;
+    justify-content: space-around;
+    position: absolute;
+    top: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+}
+
+.eye {
+    width: 30px;
+    height: 30px;
+    background-color: white;
+    border-radius: 50%;
+    transition: transform 0.3s ease;
+}
+
+/* Hands */
+.hands {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.5s ease;
+}
+
+.hand {
+    position: absolute;
+    width: 50px;
+    height: 80px;
+    background-color: #ff6666;
+    border-radius: 25px;
+}
+
+.left-hand {
+    left: -30px;
+    top: 50px;
+    transform: rotate(-45deg);
+}
+
+.right-hand {
+    right: -30px;
+    top: 50px;
+    transform: rotate(45deg);
+}
+
+/* Update these styles in your CSS */
+
+.cyber-input {
+    margin-bottom: 20px !important;
+}
+
+.cyber-input .MuiOutlinedInput-root {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--primary-neon);
+    border-radius: 8px;
+    color: var(--primary-neon) !important;
+}
+
+.cyber-input-field {
+    font-family: 'Orbitron', sans-serif !important;
+    font-size: 16px !important;
+}
+
+.cyber-input .MuiOutlinedInput-input {
+    padding: 15px !important;
+}
+
+.cyber-input .MuiOutlinedInput-input::placeholder {
+    color: var(--primary-neon);
+    opacity: 0.7;
+    font-family: 'Orbitron', sans-serif;
+}
+
+.cyber-input .MuiOutlinedInput-notchedOutline {
+    border: none !important;
+}
+
+.cyber-button {
+    margin-top: 20px !important;
+    background: transparent !important;
+    border: 1px solid var(--primary-neon) !important;
+    color: var(--primary-neon) !important;
+    font-family: 'Orbitron', sans-serif !important;
+    padding: 12px !important;
+    border-radius: 8px !important;
+}
+
+.cyber-button:hover {
+    background: rgba(0, 238, 255, 0.1) !important;
+}
+
+/* Remove any existing label styles since we're not using them */
+.MuiInputLabel-root {
+    display: none !important;
+}
